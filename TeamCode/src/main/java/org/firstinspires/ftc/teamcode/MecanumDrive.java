@@ -33,7 +33,6 @@ import java.util.Arrays;
 
 @Config
 public final class MecanumDrive {
-
     public static Params PARAMS = new Params();
 
     private static final MecanumKinematics KINEMATICS = new MecanumKinematics(

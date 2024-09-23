@@ -36,7 +36,6 @@ import java.util.List;
 
 @Config
 public final class TankDrive {
-
     public static Params PARAMS = new Params();
 
     private static final TankKinematics KINEMATICS = new TankKinematics(Params.IN_PER_TICK * Params.TRACK_WIDTH_TICKS);
