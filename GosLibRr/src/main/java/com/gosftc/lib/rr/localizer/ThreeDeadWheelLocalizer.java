@@ -1,6 +1,5 @@
 package com.gosftc.lib.rr.localizer;
 
-import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.roadrunner.DualNum;
 import com.acmerobotics.roadrunner.Time;
 import com.acmerobotics.roadrunner.Twist2dDual;
@@ -10,43 +9,49 @@ import com.acmerobotics.roadrunner.ftc.Encoder;
 import com.acmerobotics.roadrunner.ftc.FlightRecorder;
 import com.acmerobotics.roadrunner.ftc.OverflowEncoder;
 import com.acmerobotics.roadrunner.ftc.PositionVelocityPair;
-import com.acmerobotics.roadrunner.ftc.RawEncoder;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.HardwareMap;
-
 import com.gosftc.lib.rr.messages.ThreeDeadWheelInputsMessage;
 
-@Config
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 public final class ThreeDeadWheelLocalizer implements Localizer {
     public static class Params {
-        public double par0YTicks = 0.0; // y position of the first parallel encoder (in tick units)
-        public double par1YTicks = 1.0; // y position of the second parallel encoder (in tick units)
-        public double perpXTicks = 0.0; // x position of the perpendicular encoder (in tick units)
+        // y position of the first parallel encoder (in tick units)
+        public final double par0YTicks;
+
+        // y position of the second parallel encoder (in tick units)
+        public final double par1YTicks;
+
+        // x position of the perpendicular encoder (in tick units)
+        public final double perpXTicks;
+
+        public double inPerTick;
+
+        public Params(double par0YTicks, double par1YTicks, double perpXTicks, double inPerTick) {
+            this.par0YTicks = par0YTicks;
+            this.par1YTicks = par1YTicks;
+            this.perpXTicks = perpXTicks;
+            this.inPerTick = inPerTick;
+        }
     }
 
-    public static Params PARAMS = new Params();
+    private final Params params;
 
-    public final Encoder par0, par1, perp;
-
-    public final double inPerTick;
+    private final Encoder par0, par1, perp;
 
     private int lastPar0Pos, lastPar1Pos, lastPerpPos;
     private boolean initialized;
 
-    public ThreeDeadWheelLocalizer(HardwareMap hardwareMap, double inPerTick) {
-        // TODO: make sure your config has **motors** with these names (or change them)
-        //   the encoders should be plugged into the slot matching the named motor
-        //   see https://ftc-docs.firstinspires.org/en/latest/hardware_and_software_configuration/configuring/index.html
-        par0 = new OverflowEncoder(new RawEncoder(hardwareMap.get(DcMotorEx.class, "par0")));
-        par1 = new OverflowEncoder(new RawEncoder(hardwareMap.get(DcMotorEx.class, "par1")));
-        perp = new OverflowEncoder(new RawEncoder(hardwareMap.get(DcMotorEx.class, "perp")));
+    public ThreeDeadWheelLocalizer(OverflowEncoder par0, OverflowEncoder par1, OverflowEncoder perp, Params params) {
+        this.params = params;
 
-        // TODO: reverse encoder directions if needed
-        //   par0.setDirection(DcMotorSimple.Direction.REVERSE);
+        this.par0 = par0;
+        this.par1 = par1;
+        this.perp = perp;
 
-        this.inPerTick = inPerTick;
-
-        FlightRecorder.write("THREE_DEAD_WHEEL_PARAMS", PARAMS);
+        FlightRecorder.write("THREE_DEAD_WHEEL_PARAMS", params);
     }
 
     public Twist2dDual<Time> update() {
@@ -76,17 +81,17 @@ public final class ThreeDeadWheelLocalizer implements Localizer {
         Twist2dDual<Time> twist = new Twist2dDual<>(
                 new Vector2dDual<>(
                         new DualNum<Time>(new double[] {
-                                (PARAMS.par0YTicks * par1PosDelta - PARAMS.par1YTicks * par0PosDelta) / (PARAMS.par0YTicks - PARAMS.par1YTicks),
-                                (PARAMS.par0YTicks * par1PosVel.velocity - PARAMS.par1YTicks * par0PosVel.velocity) / (PARAMS.par0YTicks - PARAMS.par1YTicks),
-                        }).times(inPerTick),
+                                (params.par0YTicks * par1PosDelta - params.par1YTicks * par0PosDelta) / (params.par0YTicks - params.par1YTicks),
+                                (params.par0YTicks * par1PosVel.velocity - params.par1YTicks * par0PosVel.velocity) / (params.par0YTicks - params.par1YTicks),
+                        }).times(params.inPerTick),
                         new DualNum<Time>(new double[] {
-                                (PARAMS.perpXTicks / (PARAMS.par0YTicks - PARAMS.par1YTicks) * (par1PosDelta - par0PosDelta) + perpPosDelta),
-                                (PARAMS.perpXTicks / (PARAMS.par0YTicks - PARAMS.par1YTicks) * (par1PosVel.velocity - par0PosVel.velocity) + perpPosVel.velocity),
-                        }).times(inPerTick)
+                                (params.perpXTicks / (params.par0YTicks - params.par1YTicks) * (par1PosDelta - par0PosDelta) + perpPosDelta),
+                                (params.perpXTicks / (params.par0YTicks - params.par1YTicks) * (par1PosVel.velocity - par0PosVel.velocity) + perpPosVel.velocity),
+                        }).times(params.inPerTick)
                 ),
                 new DualNum<>(new double[] {
-                        (par0PosDelta - par1PosDelta) / (PARAMS.par0YTicks - PARAMS.par1YTicks),
-                        (par0PosVel.velocity - par1PosVel.velocity) / (PARAMS.par0YTicks - PARAMS.par1YTicks),
+                        (par0PosDelta - par1PosDelta) / (params.par0YTicks - params.par1YTicks),
+                        (par0PosVel.velocity - par1PosVel.velocity) / (params.par0YTicks - params.par1YTicks),
                 })
         );
 
@@ -95,5 +100,31 @@ public final class ThreeDeadWheelLocalizer implements Localizer {
         lastPerpPos = perpPosVel.position;
 
         return twist;
+    }
+
+    @Override
+    public void validateParams() throws RuntimeException {
+        if (params.perpXTicks == 0 && params.par0YTicks == 0 && params.par1YTicks == 1) {
+            throw new RuntimeException("Odometry wheel locations not set! Run AngularRampLogger to tune them.");
+        }
+    }
+    @Override
+    public List<Encoder> getLeftEncoders() {
+        return new ArrayList<>();
+    }
+
+    @Override
+    public List<Encoder> getRightEncoders() {
+        return new ArrayList<>();
+    }
+
+    @Override
+    public List<Encoder> getParallelEncoders() {
+        return Arrays.asList(par0, par1);
+    }
+
+    @Override
+    public List<Encoder> getPerpendicularEncoders() {
+        return Collections.singletonList(perp);
     }
 }
