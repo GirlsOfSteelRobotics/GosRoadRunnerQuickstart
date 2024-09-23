@@ -4,7 +4,7 @@
       <option name="executionName" />
       <option name="externalProjectPath" value="$PROJECT_DIR$" />
       <option name="externalSystemIdString" value="GRADLE" />
-      <option name="scriptParameters" value="--continue" />
+      <option name="scriptParameters" value="--continue -x :TeamCode:lintVitalAnalyzeRelease -x :TeamCode:lintAnalyzeDebug -x :GosLibRr:lintAnalyzeDebug" />
       <option name="taskDescriptions">
         <list />
       </option>
